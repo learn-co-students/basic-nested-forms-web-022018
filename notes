@@ -1,0 +1,85 @@
+BASIC NESTED FORMS
+
+{
+  :person => {
+    :name => "Avi",
+    :addresses_attributes => {
+      "0" => {
+        :street_address_1 => "33 West 26th St",
+        :street_address_2 => "Apt 2B",
+        :city => "New York",
+        :state => "NY",
+        :zipcode => "10010",
+        :address_type => "Work"
+      },
+      "1" => {
+        :street_address_1 => "11 Broadway",
+        :street_address_2 => "2nd Floor",
+        :city => "New York",
+        :state => "NY",
+        :zipcode => "10004",
+        :address_type => "Home"
+      }
+    }
+  }
+}
+
+accepts_nested_attributes_for and the fields_for FormHelper.
+    class Person < ActiveRecord::Base
+      has_many :addresses
+      accepts_nested_attributes_for :addresses
+    end
+new_person = Person.new
+new_person.addresses_attributes={"0"=>{"street_address_1"=>"33 West 26", "street_address_2"=>"Floor 2", "city"=>"NYC", "state"=>"NY", "zipcode"=>"10004", "address_type"=>"work1"}, "1"=>{"street_address_1"=>"11 Broadway", "street_address_2"=>"Suite 260", "city"=>"NYC", "state"=>"NY", "zipcode"=>"10004", "address_type"=>"work2"}}
+accepts_nested_attributes_for wrote the method addresses_attributes=
+when we called new_person.save it created both the Person object and the two Address objects.
+
+########## app/views/people/new.html.erb
+<%= form_for @person do |f| %>
+  <%= f.label :name %>
+  <%= f.text_field :name %><br>
+  <%= f.fields_for :addresses do |addr| %>
+    <%= addr.label :street_address_1 %>
+    <%= addr.text_field :street_address_1 %><br>
+    <%= addr.label :street_address_2 %>
+    <%= addr.text_field :street_address_2 %><br>
+    <%= addr.label :city %>
+    <%= addr.text_field :city %><br>
+    <%= addr.label :state %>
+    <%= addr.text_field :state %><br>
+    <%= addr.label :zipcode %>
+    <%= addr.text_field :zipcode %><br>
+    <%= addr.label :address_type %>
+    <%= addr.text_field :address_type %><br>
+  <% end %>
+  <%= f.submit %>
+<% end %>
+##################What?! Nothing is there. you need below
+CONTROLLER
+class PeopleController < ApplicationController
+  def new
+    @person = Person.new
+    @person.addresses.build(address_type: 'work')  #<-this was new
+    @person.addresses.build(address_type: 'home')  #<-this was new
+  end
+  def create
+    person = Person.create(person_params)
+    redirect_to people_path
+  end
+  def index
+    @people = Person.all
+  end
+  private
+  def person_params
+    params.require(:person).permit(:name,
+    addresses_attributes: [               #<-NEW this and below
+          :street_address_1,
+          :street_address_2,
+          :city,
+          :state,
+          :zipcode,
+          :address_type
+        ]
+    )
+  end #person_params
+end
